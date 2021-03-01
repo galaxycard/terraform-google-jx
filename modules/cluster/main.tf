@@ -15,7 +15,6 @@ resource "google_container_cluster" "jx_cluster" {
   enable_shielded_nodes   = var.enable_shielded_nodes
   initial_node_count      = var.min_node_count
 
-
   maintenance_policy {
     daily_maintenance_window {
       start_time = "03:00"
