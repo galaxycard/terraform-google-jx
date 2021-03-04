@@ -4,7 +4,7 @@
 // Using pessimistic version locking for all versions
 // ----------------------------------------------------------------------------
 terraform {
-  required_version = ">= 0.12.0, < 0.14"
+  required_version = ">= 0.12.0, < 0.15"
 }
 
 // ----------------------------------------------------------------------------
@@ -40,7 +40,7 @@ data "google_client_config" "default" {
 }
 
 provider "kubernetes" {
-  version          = ">= 1.11.0"
+  version          = "~>1.11.0"
   load_config_file = false
 
   host                   = "https://${module.cluster.cluster_endpoint}"
@@ -174,6 +174,8 @@ module "cluster" {
   jx_git_url      = var.jx_git_url
   jx_bot_username = var.jx_bot_username
   jx_bot_token    = var.jx_bot_token
+
+  kuberhealthy = var.kuberhealthy
 }
 
 // ----------------------------------------------------------------------------
@@ -225,17 +227,18 @@ module "backup" {
 
 // ----------------------------------------------------------------------------
 // Setup ExternalDNS
+// TODO: remove parent_domain & parent_domain_gcp_project when their deprecations are complete
 // ----------------------------------------------------------------------------
 module "dns" {
   source = "./modules/dns"
 
   gcp_project                     = var.gcp_project
   cluster_name                    = local.cluster_name
-  parent_domain                   = var.parent_domain
+  apex_domain                     = var.apex_domain != "" ? var.apex_domain : var.parent_domain
   jenkins_x_namespace             = module.cluster.jenkins_x_namespace
   jx2                             = var.jx2
   subdomain                       = var.subdomain
-  parent_domain_gcp_project       = var.parent_domain_gcp_project != "" ? var.parent_domain_gcp_project : var.gcp_project
+  apex_domain_gcp_project         = var.apex_domain_gcp_project != "" ? var.apex_domain_gcp_project : (var.parent_domain_gcp_project != "" ? var.parent_domain_gcp_project : var.gcp_project)
   apex_domain_integration_enabled = var.apex_domain_integration_enabled
 
   depends_on = [
@@ -258,7 +261,8 @@ module "jx-boot" {
 // Let's generate jx-requirements.yml
 // ----------------------------------------------------------------------------
 locals {
-  interpolated_content = templatefile("${path.module}/modules/jx-requirements.yml.tpl", {
+  requirements_file = var.jx2 ? "${path.module}/modules/jx-requirements.yml.tpl" : "${path.module}/modules/jx-requirements-v3.yml.tpl"
+  interpolated_content = templatefile(local.requirements_file, {
     gcp_project                 = var.gcp_project
     zone                        = var.cluster_location
     cluster_name                = local.cluster_name
@@ -271,13 +275,14 @@ locals {
     repository_storage_url = module.cluster.repository_storage_url
     backup_bucket_url      = module.backup.backup_bucket_url
     // Vault
-    external_vault = local.external_vault
-    vault_bucket   = length(module.vault) > 0 ? module.vault[0].vault_bucket_name : ""
-    vault_key      = length(module.vault) > 0 ? module.vault[0].vault_key : ""
-    vault_keyring  = length(module.vault) > 0 ? module.vault[0].vault_keyring : ""
-    vault_name     = length(module.vault) > 0 ? module.vault[0].vault_name : ""
-    vault_sa       = length(module.vault) > 0 ? module.vault[0].vault_sa : ""
-    vault_url      = var.vault_url
+    external_vault  = local.external_vault
+    vault_bucket    = length(module.vault) > 0 ? module.vault[0].vault_bucket_name : ""
+    vault_key       = length(module.vault) > 0 ? module.vault[0].vault_key : ""
+    vault_keyring   = length(module.vault) > 0 ? module.vault[0].vault_keyring : ""
+    vault_name      = length(module.vault) > 0 ? module.vault[0].vault_name : ""
+    vault_sa        = length(module.vault) > 0 ? module.vault[0].vault_sa : ""
+    vault_url       = var.vault_url
+    vault_installed = ! var.gsm ? true : false
     // Velero
     enable_backup    = var.enable_backup
     velero_sa        = module.backup.velero_sa
@@ -285,10 +290,14 @@ locals {
     velero_schedule  = var.velero_schedule
     velero_ttl       = var.velero_ttl
     // DNS
-    domain_enabled = var.parent_domain != "" ? true : false
-    parent_domain  = var.parent_domain
-    subdomain      = var.subdomain
-    tls_email      = var.tls_email
+    // TODO: remove parent_domain when its deprecations is complete: domain_enabled = var.apex_domain != "" ? true : false
+    domain_enabled = var.apex_domain != "" ? true : (var.parent_domain != "" ? true : false)
+    // TODO: replace with the following when parent_domain deprecations is complete: apex_domain  = var.apex_domain
+    apex_domain = var.apex_domain != "" ? var.apex_domain : var.parent_domain
+    subdomain   = var.subdomain
+    tls_email   = var.tls_email
+    // Kuberhealthy
+    kuberhealthy = var.kuberhealthy
 
     version_stream_ref = var.version_stream_ref
     version_stream_url = var.version_stream_url

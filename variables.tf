@@ -52,13 +52,25 @@ variable "force_destroy" {
 }
 
 variable "parent_domain" {
+  description = "**Deprecated** Please use apex_domain variable instead.r"
+  type        = string
+  default     = ""
+}
+
+variable "apex_domain" {
   description = "The parent / apex domain to be used for the cluster"
   type        = string
   default     = ""
 }
 
 variable "parent_domain_gcp_project" {
-  description = "The GCP project the parent domain is managed by, used to write recordsets for a subdomain if set.  Defaults to current project."
+  description = "**Deprecated** Please use apex_domain_gcp_project variable instead."
+  type        = string
+  default     = ""
+}
+
+variable "apex_domain_gcp_project" {
+  description = "The GCP project the apex domain is managed by, used to write recordsets for a subdomain if set.  Defaults to current project."
   type        = string
   default     = ""
 }
@@ -76,7 +88,7 @@ variable "apex_domain_integration_enabled" {
 }
 
 variable "tls_email" {
-  description = "Email used by Let's Encrypt. Required for TLS when parent_domain is specified"
+  description = "Email used by Let's Encrypt. Required for TLS when apex_domain is specified"
   type        = string
   default     = ""
 }
@@ -165,7 +177,7 @@ variable "node_disk_type" {
 variable "release_channel" {
   description = "The GKE release channel to subscribe to.  See https://cloud.google.com/kubernetes-engine/docs/concepts/release-channels"
   type        = string
-  default     = "UNSPECIFIED"
+  default     = "REGULAR"
 }
 
 variable "resource_labels" {
@@ -241,4 +253,10 @@ variable "jx_bot_token" {
   description = "Bot token used to interact with the Jenkins X cluster git repository"
   type        = string
   default     = ""
+}
+
+variable "kuberhealthy" {
+  description = "Enables Kuberhealthy helm installation"
+  type        = bool
+  default     = true
 }

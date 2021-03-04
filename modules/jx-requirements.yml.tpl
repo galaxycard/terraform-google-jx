@@ -17,15 +17,18 @@ environments:
 - key: production
 ingress:
 %{ if subdomain != "" }
-  domain: "${subdomain}.${parent_domain}"
+  domain: "${subdomain}.${apex_domain}"
+  externalDNS: ${domain_enabled}
 %{ else }
-  domain: "${parent_domain}"
+  domain: "${apex_domain}"
+  externalDNS: ${domain_enabled}
 %{ endif }
   tls:
     email: "${tls_email}"
     enabled: ${domain_enabled}
     production: ${lets_encrypt_production}
 kaniko: true
+kuberhealthy: ${kuberhealthy}
 storage:
   backup:
     enabled: ${enable_backup}
@@ -42,6 +45,7 @@ storage:
     enabled: %{ if repository_storage_url != "" }true%{ else }false%{ endif }
     url: ${repository_storage_url}
 secretStorage: vault
+terraformVault: ${vault_installed}
 vault:
 %{ if external_vault }
   url: ${vault_url}
@@ -57,7 +61,7 @@ velero:
   namespace: ${velero_namespace}
   schedule: "${velero_schedule}"
   serviceAccount: ${velero_sa}
-  ttl: "${velero_ttl}"  
+  ttl: "${velero_ttl}"
 %{ endif }
 versionStream:
   ref: ${version_stream_ref}

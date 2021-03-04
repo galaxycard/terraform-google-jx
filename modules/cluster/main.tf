@@ -123,7 +123,7 @@ resource "google_container_node_pool" "primary_nodes" {
 }
 
 module "jx-health" {
-  count  = var.jx2 ? 0 : 1
+  count  = var.jx2 && var.kuberhealthy ? 0 : 1
   source = "github.com/jenkins-x/terraform-jx-health?ref=main"
 
   depends_on = [
@@ -133,7 +133,7 @@ module "jx-health" {
 
 // ----------------------------------------------------------------------------
 // Add main Jenkins X Kubernetes namespace
-// 
+//
 // https://www.terraform.io/docs/providers/kubernetes/r/namespace.html
 // ----------------------------------------------------------------------------
 resource "kubernetes_namespace" "jenkins_x_namespace" {
